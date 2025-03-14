@@ -307,7 +307,8 @@ $result = mysqli_query($conn, $sql);
             flex-direction: column;
             justify-content: space-between;
             /* height: 100%; */
-            min-height: 180px; /* Ensures uniform height */
+            min-height: 180px;
+            /* Ensures uniform height */
             /* Ensures all cards have the same height */
             transition: transform 0.3s ease-in-out;
             animation: fadeIn 1s ease-in-out;
@@ -480,7 +481,7 @@ $result = mysqli_query($conn, $sql);
         <div>
             <a href="./index.php">Home</a>
             <a href="./allnotes.php">Notes</a>
-            <a href="#">About us</a>
+            <a href="./aboutus.php">About us</a>
             <a href="./contact.php">Contact Us & Feedback</a>
             <a href="./userpannel/userlogin.php">Login/Signup</a>
         </div>
@@ -493,9 +494,10 @@ $result = mysqli_query($conn, $sql);
 
     <!-- Hero Section -->
     <div class="hero">
-        <h1>My Notes</h1>
-        <p>Access and organize all your important notes in one place.</p>
+        <h1>All Your Notes, One Place</h1>
+        <p>View, edit, and organize your notes seamlessly.</p>
     </div>
+
 
     <!-- Notes Section -->
     <div class="notes-title">

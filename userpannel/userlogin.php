@@ -257,7 +257,7 @@
         <div>
             <a href="../index.php">Home</a>
             <a href="../allnotes.php">Notes</a>
-            <a href="#">About us</a>
+            <a href="./aboutus.php">About us</a>
             <a href="../contact.php">Contact Us & Feedback</a>
             <a href="../userpannel/userlogin.php">Login/Signup</a>
         </div>

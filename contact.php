@@ -417,7 +417,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div>
             <a href="./index.php">Home</a>
             <a href="./allnotes.php">Notes</a>
-            <a href="#">About us</a>
+            <a href="./aboutus.php">About us</a>
             <a href="./contact.php">Contact Us & Feedback</a>
             <a href="./userpannel/userlogin.php">Login/Signup</a>
         </div>
@@ -430,8 +430,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <!-- Hero Section -->
     <div class="hero">
-        <h1>Contact Us</h1>
-        <p>We'd love to hear from you! Reach out to us for any questions or feedback.</p>
+        <h1>Get in Touch</h1>
+        <p>Have questions or feedback? We're here to help. Contact us anytime!</p>
     </div>
 
 
