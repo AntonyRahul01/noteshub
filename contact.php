@@ -1,3 +1,22 @@
+<?php
+include './db/db.php'; // Database connection
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = mysqli_real_escape_string($conn, $_POST['name']);
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $message = mysqli_real_escape_string($conn, $_POST['message']);
+
+    $sql = "INSERT INTO feedbacks (name, email, message, created_at) VALUES ('$name', '$email', '$message', NOW())";
+
+    if (mysqli_query($conn, $sql)) {
+        echo "<script>alert('Thank you for your feedback!'); window.location.href='contact.php';</script>";
+        exit(); // Prevent further execution
+    } else {
+        echo "<script>alert('Something went wrong! Please try again.');</script>";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -101,44 +120,6 @@
             opacity: 0.9;
         }
 
-        /* Features Section */
-        .features {
-            margin: 90px;
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            padding: 50px 20px;
-            flex-wrap: wrap;
-        }
-
-        .feature-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
-            text-align: center;
-            transition: color 0.3s, transform 0.3s;
-            animation: fadeIn 1s ease-in-out;
-        }
-
-        .feature-card:hover {
-            cursor: context-menu;
-            background-color: #ffd700;
-            transform: translateY(-5px);
-        }
-
-        .feature-card h3 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .feature-card p {
-            font-size: 16px;
-            color: #555;
-        }
-
-        /* Footer */
         /* Footer */
         .footer {
             background: linear-gradient(135deg, #2c3e50, #34495e);
@@ -333,16 +314,17 @@
             animation: fadeIn 1s ease-in-out;
         }
 
+        /* Contact Information Card */
         .contact-card {
             width: 350px;
             padding: 20px;
             background: #fff;
-            border-radius: 10px;
+            border-radius: 12px;
             box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
             font-family: Arial, sans-serif;
             transition: transform 0.3s ease-in-out;
-            border-top: 5px solid #1f2a38;
+            border-top: 5px solid #34495e;
         }
 
         .contact-card:hover {
@@ -355,44 +337,58 @@
             color: #2c3e50;
         }
 
+        /* Contact Details */
         .contact-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin: 10px 0;
+            justify-content: start;
+            gap: 12px;
             font-size: 16px;
             color: #444;
+            margin: 10px 0;
+            padding: 8px;
+            background: #f7f7f7;
+            border-radius: 8px;
+            transition: background 0.3s ease-in-out;
         }
 
+        .contact-item:hover {
+            background: #eef2f7;
+        }
+
+        /* Contact Icons */
         .contact-item i {
             font-size: 20px;
-            color: #007bff;
+            color: #34495e;
         }
 
+        /* Contact Links */
         .contact-item a {
             text-decoration: none;
             color: #007bff;
-            transition: color 0.3s;
+            transition: color 0.3s ease-in-out;
+            font-weight: bold;
         }
 
         .contact-item a:hover {
             color: #0056b3;
         }
 
+        /* Social Media Icons */
         .social-links {
             margin-top: 15px;
         }
 
         .social-icon {
-            margin: 0 8px;
+            margin: 0 10px;
             font-size: 18px;
             color: #007bff;
-            transition: color 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, color 0.3s;
         }
 
         .social-icon:hover {
             color: #0056b3;
+            transform: scale(1.1);
         }
 
         .contact-btn {
@@ -411,7 +407,7 @@
         }
     </style>
     <!-- FontAwesome Icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
@@ -440,10 +436,19 @@
 
 
     <!-- Contact Form -->
+    <!-- Display Success/Error Messages -->
+    <?php if (isset($successMsg)) : ?>
+        <p style="color: green; text-align: center;"><?php echo $successMsg; ?></p>
+    <?php endif; ?>
+
+    <?php if (isset($errorMsg)) : ?>
+        <p style="color: red; text-align: center;"><?php echo $errorMsg; ?></p>
+    <?php endif; ?>
+
     <div class="contact-form">
         <h2>We Value Your Feedback</h2>
         <p>Let us know your thoughts! Fill out the form below to share your experience.</p>
-        <form action="#" method="POST">
+        <form action="contact.php" method="POST">
             <div class="form-group">
                 <label for="name">Your Name</label>
                 <input type="text" id="name" name="name" placeholder="Enter your name" required>
@@ -468,7 +473,8 @@
     <!-- Contact Information Section -->
     <div class="contact-container">
         <div class="contact-card">
-            <h2>Contact Information</h2>
+            <h2>Get in Touch</h2>
+
             <div class="contact-item">
                 <i class="fas fa-envelope"></i>
                 <p>Email: <a href="mailto:support@noteshub.com">support@noteshub.com</a></p>
@@ -481,18 +487,17 @@
 
             <div class="contact-item">
                 <i class="fas fa-map-marker-alt"></i>
-                <p>Address: 123 Education Street, Knowledge City, 12345</p>
+                <p>123 Education Street, Knowledge City, 12345</p>
             </div>
 
+            <!-- Social Media Links -->
             <div class="social-links">
                 <p>Follow Us:</p>
-                <a href="#" class="social-icon"><i class="fab fa-facebook"></i></a>
+                <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
                 <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
                 <a href="#" class="social-icon"><i class="fab fa-linkedin"></i></a>
             </div>
         </div>
-
-
     </div>
 
     <!-- Footer -->

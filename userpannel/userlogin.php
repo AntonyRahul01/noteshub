@@ -238,8 +238,8 @@
             }
         }
 
-       /* Form Container */
-       .form-login {
+        /* Form Container */
+        .form-login {
             margin-top: 100px;
             display: flex;
             flex-direction: column;
@@ -247,7 +247,6 @@
             justify-content: center;
             width: 100%;
         }
-
     </style>
 </head>
 
@@ -287,8 +286,8 @@
             <h2>Create a NotesHub Account</h2>
             <form action="register.php" method="POST">
                 <div class="input-group">
-                    <label>Full Name</label>
-                    <input type="text" name="full_name" placeholder="Enter your full name" required>
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="Choose a username" required>
                 </div>
                 <div class="input-group">
                     <label>Email</label>
@@ -303,6 +302,7 @@
             <p class="switch">Already have an account? <a href="#" onclick="toggleForm()">Login</a></p>
         </div>
     </div>
+
     <script>
         function toggleForm() {
             const loginForm = document.getElementById("login-form");
@@ -332,7 +332,6 @@
         </div>
         <p class="version">© 2025 NotesHub | Version 1.0</p>
     </div>
-
 </body>
 
 </html>

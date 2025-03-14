@@ -1,3 +1,18 @@
+<?php
+include './db/db.php'; // Database connection
+
+$uploadBasePath = "http://localhost/noteshub/userpannel/uploads/";
+
+$sql = "SELECT * FROM notes ORDER BY created_at DESC";
+// Fetch notes along with user details
+$sql = "SELECT notes.*, users.username 
+        FROM notes 
+        JOIN users ON notes.user_id = users.id 
+        ORDER BY notes.created_at DESC";
+
+$result = mysqli_query($conn, $sql);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -256,9 +271,10 @@
             margin: 40px auto;
             padding: 20px;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            /* 4 cards per row */
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            align-items: stretch;
+            /* Ensures uniform height */
         }
 
         @media (max-width: 1024px) {
@@ -288,15 +304,21 @@
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
             display: flex;
-            align-items: center;
-            gap: 15px;
+            flex-direction: column;
+            justify-content: space-between;
+            /* height: 100%; */
+            min-height: 180px; /* Ensures uniform height */
+            /* Ensures all cards have the same height */
             transition: transform 0.3s ease-in-out;
             animation: fadeIn 1s ease-in-out;
         }
 
+
+
         .note-card:hover {
             transform: translateY(-5px);
         }
+
 
         .pdf-icon {
             font-size: 40px;
@@ -305,6 +327,9 @@
 
         .note-details {
             flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         .note-title {
@@ -313,10 +338,23 @@
             color: #2c3e50;
         }
 
+        .note-subtitle {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .note-description {
+            font-size: 12px;
+            color: #777;
+            text-align: justify;
+            /* overflow: hidden; */
+        }
+
         .note-meta {
             font-size: 14px;
             color: #777;
-            margin-top: 5px;
+            margin-top: 10px;
         }
 
         /* Footer */
@@ -343,9 +381,96 @@
                 opacity: 1;
             }
         }
+
+        /* Modal Styles */
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background: white;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        /* Close Button Outside with Round Style */
+        .close-btn {
+            position: absolute;
+            top: -20px;
+            /* Position outside the modal */
+            right: -20px;
+            /* Move slightly outside */
+            width: 40px;
+            height: 40px;
+            background: white;
+            color: red;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease-in-out, background 0.3s;
+        }
+
+        .close-btn:hover {
+            background: red;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* PDF iframe */
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+
+
+        .note-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .icon-btn {
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .pdf-icon {
+            font-size: 40px;
+            color: #e74c3c;
+        }
     </style>
     <!-- FontAwesome Icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 
 <body>
@@ -376,72 +501,49 @@
     <div class="notes-title">
         <h1>All Notes</h1>
     </div>
+
+    <!-- Notes Section -->
     <div class="notes-container">
-        <!-- Note Cards -->
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">JavaScript Basics</div>
-                <div class="note-meta">Uploaded: March 10, 2025 | Size: 1.2MB</div>
-            </div>
-        </div>
+        <?php
+        if (mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $filePath = $uploadBasePath . basename($row['pdf']);
+                echo '<div class="note-card">
+                <div class="note-details">
+                    <div class="note-title">' . htmlspecialchars($row['notes_title']) . '</div>
+                    <div class="note-subtitle">' . htmlspecialchars($row['notes_subject']) . '</div>
+                     <div class="note-description">' . htmlspecialchars($row['description']) . '</div>
+                     <div class="note-description"><strong>Author:</strong> ' . htmlspecialchars($row['username']) . ' </div>
+                </div>
+               
+                <div class="note-meta">Uploaded: ' . date('F j, Y', strtotime($row['created_at'])) . '</div>
+                <div class="note-actions">
+                    <!-- Eye Icon for Viewing PDF -->
+                    <i class="fas fa-eye icon-btn" style="color: #3498db;" onclick="openPdfModal(\'' . $filePath . '\')"></i>
+                    
+                    <!-- Download Icon for Downloading -->
+                    <a href="update_download_count.php?id=' . $row['id'] . '">
+                        <i class="fas fa-download icon-btn" style="color: #27ae60;"></i>
+                    </a>
+                </div>
+              </div>';
+            }
+        } else {
+            echo "<p>No notes available.</p>";
+        }
+        ?>
+    </div>
 
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">React Components Guide</div>
-                <div class="note-meta">Uploaded: March 8, 2025 | Size: 900KB</div>
-            </div>
-        </div>
 
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">Node.js API Development</div>
-                <div class="note-meta">Uploaded: March 5, 2025 | Size: 2.1MB</div>
-            </div>
-        </div>
-
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">MongoDB CRUD Operations</div>
-                <div class="note-meta">Uploaded: March 3, 2025 | Size: 1.5MB</div>
-            </div>
-        </div>
-
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">AWS Lambda & API Gateway</div>
-                <div class="note-meta">Uploaded: March 1, 2025 | Size: 1.8MB</div>
-            </div>
-        </div>
-
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">MySQL Database Design</div>
-                <div class="note-meta">Uploaded: Feb 25, 2025 | Size: 2.4MB</div>
-            </div>
-        </div>
-
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">Python Data Science</div>
-                <div class="note-meta">Uploaded: Feb 20, 2025 | Size: 3.1MB</div>
-            </div>
-        </div>
-
-        <div class="note-card">
-            <i class="fas fa-file-pdf pdf-icon"></i>
-            <div class="note-details">
-                <div class="note-title">Docker & Kubernetes</div>
-                <div class="note-meta">Uploaded: Feb 15, 2025 | Size: 1.9MB</div>
-            </div>
+    <!-- PDF Preview Modal -->
+    <div id="pdfModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closePdfModal()">&times;</span>
+            <iframe id="pdfViewer" src="" allowfullscreen></iframe>
         </div>
     </div>
+
+
 
     <!-- Footer -->
     <div class="footer">
@@ -457,6 +559,38 @@
         </div>
         <p class="version">© 2025 NotesHub | Version 1.0</p>
     </div>
+
+    <script>
+        function openPdfModal(pdfUrl) {
+            var pdfViewer = document.getElementById("pdfViewer");
+            var modal = document.getElementById("pdfModal");
+
+            if (pdfViewer && modal) {
+                pdfViewer.src = pdfUrl;
+                modal.style.display = "flex"; // Make sure it appears properly
+            } else {
+                console.error("PDF modal or viewer not found in the DOM.");
+            }
+        }
+
+        function closePdfModal() {
+            var pdfViewer = document.getElementById("pdfViewer");
+            var modal = document.getElementById("pdfModal");
+
+            if (modal) {
+                modal.style.display = "none";
+                if (pdfViewer) {
+                    pdfViewer.src = ""; // Clear iframe to stop loading
+                }
+            }
+        }
+
+        // Ensure modal is hidden when the page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("pdfModal").style.display = "none";
+        });
+    </script>
+
 
 </body>
 

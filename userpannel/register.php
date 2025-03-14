@@ -1,18 +1,22 @@
-<?php
+<?php 
 include "../db/db.php";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $full_name = $_POST["full_name"];
+    $username = $_POST["username"];
     $email = $_POST["email"];
-    $password = password_hash($_POST["password"], PASSWORD_DEFAULT); // Secure hashing
+    $password = password_hash($_POST["password"], PASSWORD_DEFAULT); // Secure password hashing
 
-    $stmt = $conn->prepare("INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $full_name, $email, $password);
+    // Set profile picture as NULL initially
+    $profile_picture = NULL;
+
+    // Insert user into database
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, profile_picture) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $username, $email, $password, $profile_picture);
 
     if ($stmt->execute()) {
         echo "<script>alert('Registration successful! You can now login.'); window.location='userlogin.php';</script>";
     } else {
-        echo "<script>alert('Error: Email already exists!'); window.location='userlogin.php';</script>";
+        echo "<script>alert('Error: Username or Email already exists!'); window.location='userlogin.php';</script>";
     }
 
     $stmt->close();

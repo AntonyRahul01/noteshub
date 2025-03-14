@@ -2,43 +2,70 @@
 session_start();
 require '../db/db.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: userlogin.php");
+// Ensure user is logged in
+if (!isset($_SESSION["user_id"]) || empty($_SESSION["user_id"])) {
+    echo "<script>alert('You must log in first.'); window.location='userlogin.php';</script>";
     exit();
 }
 
+$user_id = $_SESSION["user_id"]; // Get logged-in user ID
 
-// Handle new note submission with file upload
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_note'])) {
-    $title = trim($_POST["title"]);
-    $content = trim($_POST["content"]);
+// Handle adding or updating notes
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $note_id = isset($_POST["note_id"]) ? intval($_POST["note_id"]) : 0;
+    $notes_title = trim($_POST["notes_title"]);
+    $notes_subject = trim($_POST["notes_subject"]);
+    $description = trim($_POST["description"]);
     $pdf_filename = null;
 
-    // Check if a file is uploaded
+    // Fetch old file name if updating
+    if ($note_id > 0) {
+        $stmt = $conn->prepare("SELECT pdf FROM notes WHERE id = ?");
+        $stmt->bind_param("i", $note_id);
+        $stmt->execute();
+        $stmt->bind_result($old_pdf);
+        $stmt->fetch();
+        $stmt->close();
+    }
+
+    // Handle file upload
     if (!empty($_FILES['pdf_file']['name'])) {
         $target_dir = "uploads/";
-        $pdf_filename = basename($_FILES["pdf_file"]["name"]);
+        $pdf_filename = time() . "_" . basename($_FILES["pdf_file"]["name"]);
         $target_file = $target_dir . $pdf_filename;
         $file_type = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
 
-        // Validate file type
-        if ($file_type != "pdf") {
+        if ($file_type !== "pdf") {
             echo "<script>alert('Only PDF files are allowed!');</script>";
+            exit();
+        } elseif (!move_uploaded_file($_FILES["pdf_file"]["tmp_name"], $target_file)) {
+            echo "<script>alert('Error uploading file!');</script>";
+            exit();
         } else {
-            if (move_uploaded_file($_FILES["pdf_file"]["tmp_name"], $target_file)) {
-                // File uploaded successfully
-            } else {
-                echo "<script>alert('Error uploading file!');</script>";
+            // Delete old file if new file is uploaded
+            if ($note_id > 0 && !empty($old_pdf)) {
+                unlink("uploads/" . $old_pdf);
             }
         }
+    } else {
+        // Keep old file if no new file is uploaded
+        $pdf_filename = $note_id > 0 ? $old_pdf : null;
     }
 
-    if (!empty($title) && !empty($content)) {
-        $stmt = $conn->prepare("INSERT INTO notes (title, content, pdf_filename) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $title, $content, $pdf_filename);
+    if ($note_id > 0) {
+        // Update existing note
+        $stmt = $conn->prepare("UPDATE notes SET notes_title = ?, notes_subject = ?, description = ?, pdf = ? WHERE id = ?");
+        $stmt->bind_param("ssssi", $notes_title, $notes_subject, $description, $pdf_filename, $note_id);
         $stmt->execute();
-        $stmt->close();
+        echo "<script>alert('Note updated successfully!'); window.location='uploadnotes.php';</script>";
+    } else {
+        // Insert new note
+        $stmt = $conn->prepare("INSERT INTO notes (user_id, notes_title, notes_subject, description, pdf, view_count, download_count) VALUES (?, ?, ?, ?, ?, 0, 0)");
+        $stmt->bind_param("issss", $user_id, $notes_title, $notes_subject, $description, $pdf_filename);
+        $stmt->execute();
+        echo "<script>alert('Note added successfully!'); window.location='uploadnotes.php';</script>";
     }
+    $stmt->close();
 }
 
 // Handle note deletion
@@ -46,7 +73,7 @@ if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
 
     // Get file name before deleting
-    $stmt = $conn->prepare("SELECT pdf_filename FROM notes WHERE id = ?");
+    $stmt = $conn->prepare("SELECT pdf FROM notes WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $stmt->bind_result($pdf_filename);
@@ -64,12 +91,17 @@ if (isset($_GET['delete'])) {
     $stmt->execute();
     $stmt->close();
 
-    header("Location: notes.php");
+    header("Location: uploadnotes.php");
     exit();
 }
 
-// Fetch all notes
-$result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
+// Fetch all notes for the logged-in user
+$stmt = $conn->prepare("SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$stmt->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -212,57 +244,132 @@ $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
             }
         }
     </style>
+    <script>
+        function editNote(id, title, subject, description, pdf) {
+            document.getElementById("note_id").value = id;
+            document.getElementById("notes_title").value = title;
+            document.getElementById("notes_subject").value = subject;
+            document.getElementById("description").value = description;
+
+            // Change button text to "Update Note"
+            document.getElementById("submit_button").innerText = "Update Note";
+
+            // Optional: Scroll to the form for better UX
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+    </script>
+
+    <script>
+        function editNote(id, title, subject, description, pdf) {
+            document.getElementById("note_id").value = id;
+            document.getElementById("notes_title").value = title;
+            document.getElementById("notes_subject").value = subject;
+            document.getElementById("description").value = description;
+
+            document.getElementById("submit_button").innerText = "Update Note";
+            document.getElementById("cancel_button").style.display = "inline-block"; // Show Cancel button
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function resetForm() {
+            document.getElementById("noteForm").reset(); // Reset all input fields
+            document.getElementById("note_id").value = ""; // Clear hidden note_id
+            document.getElementById("submit_button").innerText = "Add Note"; // Change button text back to default
+            // document.getElementById("cancel_button").style.display = "none"; // Hide Cancel button
+        }
+    </script>
+    
     <!-- FontAwesome Icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
-    <!-- Navbar -->
     <div class="navbar">
         <div class="logo">NotesHub</div>
         <div>
             <a href="./dashboard.php">Home</a>
-            <a href="./uploadnotes.php">Upload Notes</a>
+            <a href="./uploadnotes.php">Upload & Manage Notes</a>
             <a href="./profile.php">View & Edit Profile</a>
             <a href="./logout.php">Logout</a>
         </div>
     </div>
 
-    <!-- Add Note Form -->
-    <div class="container">
-        <div class="card">
-            <div class="card-header bg-dark text-white">Add New Note</div>
-            <div class="card-body">
-                <form method="POST" action="notes.php" enctype="multipart/form-data">
+    <div class="container mt-4">
+        <!-- Add / Edit Note Form -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #2c3e50, #34495e); font-weight: bold;">
+                Add / Edit Note
+            </div>
+            <div class="card-body" style="background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
+                <form id="noteForm" method="POST" action="uploadnotes.php" enctype="multipart/form-data">
+                    <input type="hidden" name="note_id" id="note_id">
                     <div class="mb-3">
                         <label class="form-label">Title</label>
-                        <input type="text" name="title" class="form-control" required>
+                        <input type="text" name="notes_title" id="notes_title" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Content</label>
-                        <textarea name="content" class="form-control" rows="4" required></textarea>
+                        <label class="form-label">Subject</label>
+                        <input type="text" name="notes_subject" id="notes_subject" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" id="description" class="form-control" rows="4" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Upload PDF (optional)</label>
                         <input type="file" name="pdf_file" class="form-control" accept=".pdf">
                     </div>
-                    <button type="submit" name="add_note" class="btn btn-primary">Add Note</button>
+                    <button type="button" id="cancel_button" class="btn btn-secondary" onclick="resetForm()">Cancel</button>
+
+                    <button type="submit" name="add_note" id="submit_button" class="btn btn-primary">
+                        Add Note
+                    </button>
+
                 </form>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header bg-dark text-white">Your Notes</div>
-            <div class="card-body">
+        <!-- Display Notes -->
+        <div class="card shadow-sm">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #2c3e50, #34495e); font-weight: bold;">
+                Your Notes
+            </div>
+            <div class="card-body" style="background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
                 <?php while ($note = $result->fetch_assoc()) : ?>
-                    <div class="note-card mb-3">
-                        <h5><?php echo htmlspecialchars($note['title']); ?></h5>
-                        <p><?php echo nl2br(htmlspecialchars($note['content'])); ?></p>
-                        <small class="text-muted">Created on: <?php echo $note['created_at']; ?></small>
-                        <?php if (!empty($note['pdf_filename'])) : ?>
-                            <br><a href="uploads/<?php echo $note['pdf_filename']; ?>" class="btn btn-info btn-sm mt-2" target="_blank">View PDF</a>
+                    <div class="list-group-item list-group-item-action mb-3 shadow-sm p-3" style="border-radius: 8px; background: white;">
+                        <h5 class="mb-1 text-dark"><?php echo htmlspecialchars($note['notes_title']); ?></h5>
+                        <p class="mb-1 text-secondary"><strong>Subject:</strong> <?php echo htmlspecialchars($note['notes_subject']); ?></p>
+                        <p class="mb-1 text-secondary"><strong>Description:</strong> <?php echo htmlspecialchars($note['description']); ?></p>
+                        <p class="small text-muted">Created on: <?php echo $note['created_at']; ?></p>
+
+                        <!-- View PDF Button -->
+                        <!-- View PDF Button -->
+                        <?php if (!empty($note['pdf'])) : ?>
+                            <a href="uploads/<?php echo $note['pdf']; ?>"
+                                class="btn btn-info btn-sm"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                View PDF
+                            </a>
                         <?php endif; ?>
-                        <a href="notes.php?delete=<?php echo $note['id']; ?>" class="btn btn-danger btn-sm float-end" onclick="return confirm('Are you sure?')">Delete</a>
+
+
+                        <!-- Edit and Delete Buttons -->
+                        <button class="btn btn-warning btn-sm" onclick="editNote(
+                        '<?php echo $note['id']; ?>',
+                        '<?php echo addslashes($note['notes_title']); ?>',
+                        '<?php echo addslashes($note['notes_subject']); ?>',
+                        '<?php echo addslashes($note['description']); ?>',
+                        '<?php echo addslashes($note['pdf']); ?>'
+                    )">Edit</button>
+
+                        <a href="uploadnotes.php?delete=<?php echo $note['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">Delete</a>
                     </div>
                 <?php endwhile; ?>
             </div>
