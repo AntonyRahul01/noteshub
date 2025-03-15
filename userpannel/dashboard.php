@@ -43,6 +43,15 @@ $stmt->execute();
 $stmt->bind_result($total_downloads);
 $stmt->fetch();
 $stmt->close();
+
+// Fetch total downloads count
+$total_views_query = "SELECT SUM(view_count) FROM notes WHERE user_id = ?";
+$stmt = $conn->prepare($total_views_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($total_views);
+$stmt->fetch();
+$stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -196,17 +205,20 @@ $stmt->close();
             transition: transform 0.3s, box-shadow 0.3s;
             width: 350px;
             margin: auto;
+            cursor: pointer;
         }
 
         .card h4 {
             font-size: 18px;
             margin-bottom: 10px;
             font-weight: normal;
+            color: #f8f9fa;
         }
 
         .card h2 {
             font-size: 32px;
             font-weight: bold;
+            color: #ffd700;
         }
 
         .card:hover {
@@ -215,33 +227,33 @@ $stmt->close();
         }
 
         /* Table Styling */
-        .table {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
             background: white;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .table thead {
+        table th,
+        table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+            /* Center-align text */
+            vertical-align: middle;
+            /* Align vertically */
+        }
+
+        table th {
             background: #2c3e50;
             color: white;
-            font-size: 18px;
         }
 
-        .table th,
-        .table td {
-            padding: 15px;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .table tbody tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        .table tbody tr:hover {
-            background: #f0f4f8;
-            transition: 0.3s;
+        table tbody tr:hover {
+            background-color: #f9f9f9;
         }
     </style>
     <!-- FontAwesome Icons -->
@@ -261,27 +273,35 @@ $stmt->close();
     </div>
     <div class="container mt-5">
         <div class="row text-center mb-4">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card p-4 shadow">
                     <h4>Total Notes</h4>
                     <h2><?php echo $total_notes; ?></h2>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card p-4 shadow">
                     <h4>Over All Downloads</h4>
                     <h2><?php echo $total_downloads ? $total_downloads : 0; ?></h2>
                 </div>
             </div>
+            <div class="col-md-4">
+                <div class="card p-4 shadow">
+                    <h4>Over All Views</h4>
+                    <h2><?php echo $total_views ? $total_views : 0; ?></h2>
+                </div>
+            </div>
         </div>
 
-        <table class="table table-bordered table-striped">
+
+        <table>
             <thead>
                 <tr>
                     <th>S.No</th>
                     <th>Title</th>
                     <th>Subject</th>
-                    <th>Total Number of Downloads</th>
+                    <th>Total No.of Downloads</th>
+                    <th>Total No.of Views</th>
                 </tr>
             </thead>
             <tbody>
@@ -293,6 +313,7 @@ $stmt->close();
                         <td><?php echo htmlspecialchars($row['notes_title']); ?></td>
                         <td><?php echo htmlspecialchars($row['notes_subject']); ?></td>
                         <td><?php echo $row['dwnld_count']; ?></td>
+                        <td><?php echo $row['view_count']; ?></td>
                     </tr>
                 <?php } ?>
             </tbody>

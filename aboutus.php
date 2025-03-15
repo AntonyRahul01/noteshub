@@ -52,6 +52,12 @@
             color: #ffd700;
         }
 
+        .navbar .logo a {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
         /* Notification Banner */
         .notification {
             background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -362,7 +368,7 @@
 <body>
     <!-- Navbar -->
     <div class="navbar">
-        <div class="logo">NotesHub</div>
+        <div class="logo"><a href="./admin/login.php">NotesHub</a></div>
         <div>
             <a href="./index.php">Home</a>
             <a href="./allnotes.php">Notes</a>

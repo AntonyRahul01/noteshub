@@ -52,9 +52,12 @@
             color: #ffd700;
         }
 
+        .navbar .logo a {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
 
-
-        /* Footer */
         /* Footer */
         .footer {
             background: linear-gradient(135deg, #2c3e50, #34495e);
@@ -253,11 +256,11 @@
 <body>
     <!-- Navbar -->
     <div class="navbar">
-        <div class="logo">NotesHub</div>
+        <div class="logo"><a href="../admin/login.php">NotesHub</a></div>
         <div>
             <a href="../index.php">Home</a>
             <a href="../allnotes.php">Notes</a>
-            <a href="./aboutus.php">About us</a>
+            <a href="../aboutus.php">About us</a>
             <a href="../contact.php">Contact Us & Feedback</a>
             <a href="../userpannel/userlogin.php">Login/Signup</a>
         </div>

@@ -5,10 +5,26 @@ $uploadBasePath = "http://localhost/noteshub/userpannel/uploads/";
 
 $sql = "SELECT * FROM notes ORDER BY created_at DESC";
 // Fetch notes along with user details
-$sql = "SELECT notes.*, users.username 
-        FROM notes 
-        JOIN users ON notes.user_id = users.id 
-        ORDER BY notes.created_at DESC";
+// $sql = "SELECT notes.*, users.username 
+//         FROM notes 
+//         JOIN users ON notes.user_id = users.id 
+//         ORDER BY notes.created_at DESC";
+
+$searchQuery = "";
+if (isset($_GET['search'])) {
+    $searchQuery = mysqli_real_escape_string($conn, $_GET['search']);
+    $sql = "SELECT notes.*, users.username 
+            FROM notes 
+            JOIN users ON notes.user_id = users.id 
+            WHERE notes.notes_subject LIKE '%$searchQuery%'
+            ORDER BY notes.created_at DESC";
+} else {
+    $sql = "SELECT notes.*, users.username 
+            FROM notes 
+            JOIN users ON notes.user_id = users.id 
+            ORDER BY notes.created_at DESC";
+}
+
 
 $result = mysqli_query($conn, $sql);
 ?>
@@ -62,6 +78,12 @@ $result = mysqli_query($conn, $sql);
         }
 
         .navbar .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .navbar .logo a {
             font-size: 24px;
             font-weight: bold;
             color: #ffd700;
@@ -468,6 +490,34 @@ $result = mysqli_query($conn, $sql);
             font-size: 40px;
             color: #e74c3c;
         }
+
+        .search-form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .search-form input {
+            padding: 10px;
+            width: 250px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .search-form button {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-left: 5px;
+        }
+
+        .search-form button:hover {
+            background-color: #2980b9;
+        }
     </style>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -477,7 +527,7 @@ $result = mysqli_query($conn, $sql);
 <body>
     <!-- Navbar -->
     <div class="navbar">
-        <div class="logo">NotesHub</div>
+        <div class="logo"><a href="./admin/login.php">NotesHub</a></div>
         <div>
             <a href="./index.php">Home</a>
             <a href="./allnotes.php">Notes</a>
@@ -504,6 +554,18 @@ $result = mysqli_query($conn, $sql);
         <h1>All Notes</h1>
     </div>
 
+    <!-- <form method="GET" action="" class="search-form">
+        <input type="text" name="search" placeholder="Search by Subject..." value="<?php echo htmlspecialchars($searchQuery); ?>">
+        <button type="submit"><i class="fas fa-search"></i> Search</button>
+    </form> -->
+
+    <!-- Search Bars -->
+    <div style="text-align: center; margin: 20px;">
+        <input type="text" id="searchTitle" placeholder="Search by Title" onkeyup="filterNotes()" style="padding: 10px; width: 250px; border-radius: 5px; border: 1px solid #ccc;">
+        <input type="text" id="searchSubject" placeholder="Search by Subject" onkeyup="filterNotes()" style="padding: 10px; width: 250px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
+    </div>
+
+
     <!-- Notes Section -->
     <div class="notes-container">
         <?php
@@ -521,11 +583,13 @@ $result = mysqli_query($conn, $sql);
                 <div class="note-meta">Uploaded: ' . date('F j, Y', strtotime($row['created_at'])) . '</div>
                 <div class="note-actions">
                     <!-- Eye Icon for Viewing PDF -->
-                    <i class="fas fa-eye icon-btn" style="color: #3498db;" onclick="openPdfModal(\'' . $filePath . '\')"></i>
+                    <i class="fas fa-eye icon-btn" style="color: #3498db;" 
+           onclick="increaseViewCount(' . $row['id'] . '); openPdfModal(\'' . $filePath . '\')"></i>
+        ' . htmlspecialchars($row['view_count']) . ' Views
                     
                     <!-- Download Icon for Downloading -->
                     <a href="update_download_count.php?id=' . $row['id'] . '">
-                        <i class="fas fa-download icon-btn" style="color: #27ae60;"></i>
+                        <i class="fas fa-download icon-btn" style="color: #27ae60;"></i>' . htmlspecialchars($row['dwnld_count']) . ' Downloads
                     </a>
                 </div>
               </div>';
@@ -561,6 +625,45 @@ $result = mysqli_query($conn, $sql);
         </div>
         <p class="version">© 2025 NotesHub | Version 1.0</p>
     </div>
+
+    <script>
+        function increaseViewCount(noteId) {
+            fetch('update_view_count.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'id=' + encodeURIComponent(noteId)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        console.error("Error updating view count:", data.error);
+                    }
+                })
+                .catch(error => console.error("Fetch error:", error));
+        }
+    </script>
+
+    <script>
+        function filterNotes() {
+            let searchSubject = document.getElementById("searchSubject").value.toLowerCase();
+            let searchTitle = document.getElementById("searchTitle").value.toLowerCase();
+            let notes = document.querySelectorAll(".note-card");
+
+            notes.forEach(note => {
+                let subject = note.querySelector(".note-subtitle").textContent.toLowerCase();
+                let title = note.querySelector(".note-title").textContent.toLowerCase();
+
+                if (subject.includes(searchSubject) && title.includes(searchTitle)) {
+                    note.style.display = "block";
+                } else {
+                    note.style.display = "none";
+                }
+            });
+        }
+    </script>
+
 
     <script>
         function openPdfModal(pdfUrl) {

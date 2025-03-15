@@ -7,45 +7,12 @@ if (!isset($_SESSION['admin_id'])) {
     exit();
 }
 
-// Handle new note submission with file upload
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_note'])) {
-    $title = trim($_POST["title"]);
-    $content = trim($_POST["content"]);
-    $pdf_filename = null;
-
-    // Check if a file is uploaded
-    if (!empty($_FILES['pdf_file']['name'])) {
-        $target_dir = "uploads/";
-        $pdf_filename = basename($_FILES["pdf_file"]["name"]);
-        $target_file = $target_dir . $pdf_filename;
-        $file_type = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
-
-        // Validate file type
-        if ($file_type != "pdf") {
-            echo "<script>alert('Only PDF files are allowed!');</script>";
-        } else {
-            if (move_uploaded_file($_FILES["pdf_file"]["tmp_name"], $target_file)) {
-                // File uploaded successfully
-            } else {
-                echo "<script>alert('Error uploading file!');</script>";
-            }
-        }
-    }
-
-    if (!empty($title) && !empty($content)) {
-        $stmt = $conn->prepare("INSERT INTO notes (title, content, pdf_filename) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $title, $content, $pdf_filename);
-        $stmt->execute();
-        $stmt->close();
-    }
-}
-
 // Handle note deletion
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    
+
     // Get file name before deleting
-    $stmt = $conn->prepare("SELECT pdf_filename FROM notes WHERE id = ?");
+    $stmt = $conn->prepare("SELECT pdf FROM notes WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $stmt->bind_result($pdf_filename);
@@ -54,7 +21,7 @@ if (isset($_GET['delete'])) {
 
     // Delete file if exists
     if (!empty($pdf_filename)) {
-        unlink("uploads/" . $pdf_filename);
+        unlink("../userpannel/uploads/" . $pdf_filename);
     }
 
     // Delete note from database
@@ -63,12 +30,20 @@ if (isset($_GET['delete'])) {
     $stmt->execute();
     $stmt->close();
 
-    header("Location: notes.php");
+    header("Location: notespage.php");
     exit();
 }
 
+$result = $conn->query("
+    SELECT notes.*, users.username 
+    FROM notes 
+    JOIN users ON notes.user_id = users.id 
+    ORDER BY notes.created_at DESC
+");
+
+
 // Fetch all notes
-$result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
+// $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
 ?>
 
 <!DOCTYPE html>
@@ -129,12 +104,16 @@ $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
         .dashboard-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             background: white;
-            padding: 10px 15px;
+            padding: 15px 20px;
             border-radius: 8px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-header h2 {
+            font-size: 25px;
+            font-weight: bold;
         }
 
         /* Recent Activity */
@@ -142,22 +121,41 @@ $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
             margin-top: 30px;
         }
 
+        .notes-list {
+            margin-top: 30px;
+        }
+
+        .notes-list h4 {
+            font-weight: bold;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
         }
 
         table th,
         table td {
             border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
+            padding: 12px;
+            text-align: center;
+            /* Center-align text */
+            vertical-align: middle;
+            /* Align vertically */
         }
 
         table th {
             background: #2c3e50;
             color: white;
+        }
+
+        table tbody tr:hover {
+            background-color: #f9f9f9;
         }
     </style>
 </head>
@@ -166,7 +164,7 @@ $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
     <div class="sidebar">
         <h2>NotesHub Admin</h2>
         <a href="./dashboard.php">Dashboard</a>
-        <a href="#">Users</a>
+        <a href="./feedback.php">Feedbacks</a>
         <a href="./notespage.php">Notes</a>
         <a href="./logout.php">Logout</a>
     </div>
@@ -175,48 +173,69 @@ $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
         <div class="dashboard-header">
             <h2>Dashboard</h2>
         </div>
-        <!-- Add Note Form -->
-        <div class="card mb-4">
-            <div class="card-header">Add New Note</div>
-            <div class="card-body">
-                <form method="POST" action="notes.php" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input type="text" name="title" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Content</label>
-                        <textarea name="content" class="form-control" rows="4" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Upload PDF (optional)</label>
-                        <input type="file" name="pdf_file" class="form-control" accept=".pdf">
-                    </div>
-                    <button type="submit" name="add_note" class="btn btn-primary">Add Note</button>
-                </form>
+
+        <div class="notes-list">
+            <h4>Notes List</h4>
+            <!-- Search Bars -->
+            <div style="text-align: center; margin: 20px;">
+                <input type="text" id="searchTitle" placeholder="Search by Title" onkeyup="filterNotes()" style="padding: 10px; width: 250px; border-radius: 5px; border: 1px solid #ccc;">
+                <input type="text" id="searchSubject" placeholder="Search by Subject" onkeyup="filterNotes()" style="padding: 10px; width: 250px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                <input type="text" id="searchUsername" placeholder="Search by Username" onkeyup="filterNotes()" style="padding: 10px; width: 250px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
             </div>
-        </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>S.no</th>
+                        <th>Title</th>
+                        <th>Subject</th>
+                        <th>Author</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $sno = 1; // Serial number counter
+                    while ($row = $result->fetch_assoc()) {
+                        echo "<tr>";
+                        echo "<td>" . $sno . "</td>";
+                        echo "<td>" . htmlspecialchars($row['notes_title']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['notes_subject']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['username']) . "</td>";
+                        echo "<td>
+                <a href='../userpannel/uploads/" . htmlspecialchars($row['pdf']) . "' target='_blank' class='btn btn-primary btn-sm'>View</a>
+                <a href='?delete=" . $row['id'] . "' class='btn btn-danger btn-sm' onclick='return confirm(\"Are you sure you want to delete this note?\")'>Delete</a>
+              </td>";
+                        echo "</tr>";
+                        $sno++;
+                    }
+                    ?>
+                </tbody>
 
-        <!-- Notes List -->
-        <div class="card">
-            <div class="card-header">Your Notes</div>
-            <div class="card-body">
-                <?php while ($note = $result->fetch_assoc()) : ?>
-                    <div class="border p-3 mb-3">
-                        <h5><?php echo htmlspecialchars($note['title']); ?></h5>
-                        <p><?php echo nl2br(htmlspecialchars($note['content'])); ?></p>
-                        <small class="text-muted">Created on: <?php echo $note['created_at']; ?></small>
-
-                        <?php if (!empty($note['pdf_filename'])) : ?>
-                            <br><a href="uploads/<?php echo $note['pdf_filename']; ?>" class="btn btn-info btn-sm mt-2" target="_blank">View PDF</a>
-                        <?php endif; ?>
-
-                        <a href="notes.php?delete=<?php echo $note['id']; ?>" class="btn btn-danger btn-sm float-end" onclick="return confirm('Are you sure?')">Delete</a>
-                    </div>
-                <?php endwhile; ?>
-            </div>
+            </table>
         </div>
     </div>
+    <script>
+        function filterNotes() {
+            let searchTitle = document.getElementById("searchTitle").value.toLowerCase();
+            let searchSubject = document.getElementById("searchSubject").value.toLowerCase();
+            let searchUsername = document.getElementById("searchUsername").value.toLowerCase();
+            let table = document.querySelector("table tbody");
+            let rows = table.getElementsByTagName("tr");
+
+            for (let i = 0; i < rows.length; i++) {
+                let title = rows[i].getElementsByTagName("td")[1].textContent.toLowerCase();
+                let subject = rows[i].getElementsByTagName("td")[2].textContent.toLowerCase();
+                let username = rows[i].getElementsByTagName("td")[3].textContent.toLowerCase();
+
+                if (title.includes(searchTitle) && subject.includes(searchSubject) && username.includes(searchUsername)) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+
 </body>
 
 </html>

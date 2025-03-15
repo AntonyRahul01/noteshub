@@ -4,6 +4,31 @@ if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit();
 }
+
+include '../db/db.php'; // Database connection
+
+// Fetch Users
+$sql = "SELECT * FROM users ORDER BY id DESC";
+
+// Count total users
+$userCountQuery = "SELECT COUNT(*) AS total_users FROM users";
+$userCountResult = mysqli_query($conn, $userCountQuery);
+$userCountRow = mysqli_fetch_assoc($userCountResult);
+$totalUsers = $userCountRow['total_users'];
+
+// Count total notes
+$notesCountQuery = "SELECT COUNT(*) AS total_notes FROM notes";
+$notesCountResult = mysqli_query($conn, $notesCountQuery);
+$notesCountRow = mysqli_fetch_assoc($notesCountResult);
+$totalNotes = $notesCountRow['total_notes'];
+
+// Count total feedbacks
+$fbCountQuery = "SELECT COUNT(*) AS total_feedbacks FROM feedbacks";
+$fbCountResult = mysqli_query($conn, $fbCountQuery);
+$fbCountRow = mysqli_fetch_assoc($fbCountResult);
+$totalfb = $fbCountRow['total_feedbacks'];
+
+$result = mysqli_query($conn, $sql);
 ?>
 
 <!DOCTYPE html>
@@ -80,11 +105,6 @@ if (!isset($_SESSION['admin_id'])) {
             font-weight: bold;
         }
 
-        .recent-activity h2 {
-            font-weight: bold;
-            font-size: 18px;
-        }
-
         .cards {
             display: flex;
             gap: 20px;
@@ -120,11 +140,14 @@ if (!isset($_SESSION['admin_id'])) {
             color: #e74c3c;
         }
 
-        /* Recent Activity */
-        .recent-activity {
+        /* Users List */
+        .users-list {
             margin-top: 30px;
         }
 
+        .users-list h4{
+            font-weight: bold;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -139,7 +162,8 @@ if (!isset($_SESSION['admin_id'])) {
         table td {
             border: 1px solid #ddd;
             padding: 12px;
-            text-align: left;
+            text-align: center; /* Center-align text */
+            vertical-align: middle; /* Align vertically */
         }
 
         table th {
@@ -149,6 +173,15 @@ if (!isset($_SESSION['admin_id'])) {
 
         table tbody tr:hover {
             background-color: #f9f9f9;
+        }
+
+        /* Profile Picture */
+        .profile-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #2c3e50;
         }
 
         /* Responsive Design */
@@ -199,7 +232,7 @@ if (!isset($_SESSION['admin_id'])) {
     <div class="sidebar">
         <h2>NotesHub Admin</h2>
         <a href="./dashboard.php">Dashboard</a>
-        <a href="#">Users</a>
+        <a href="./feedback.php">Feedbacks</a>
         <a href="./notespage.php">Notes</a>
         <a href="./logout.php">Logout</a>
     </div>
@@ -212,64 +245,45 @@ if (!isset($_SESSION['admin_id'])) {
         <div class="cards">
             <div class="card">
                 <h4>Total Users</h4>
-                <p>1,245</p>
+                <p><?php echo $totalUsers; ?></p>
             </div>
             <div class="card">
                 <h4>Notes Created</h4>
-                <p>4,832</p>
+                <p><?php echo $totalNotes; ?></p>
             </div>
             <div class="card">
-                <h4>Active Users</h4>
-                <p>678</p>
+                <h4>Total Feedbacks</h4>
+                <p><?php echo $totalfb; ?></p>
             </div>
         </div>
 
-        <div class="recent-activity">
-            <h2>Recent Activity</h2>
+        <div class="users-list">
+            <h4>Users List</h4>
             <table>
                 <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Date</th>
+                <tr>
+                        <th>S.no</th>
+                        <th>Profile Picture</th>
+                        <th>Name</th>
+                        <th>Email</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>John Doe</td>
-                        <td>Created a new note</td>
-                        <td>2025-03-10</td>
-                    </tr>
-                    <tr>
-                        <td>Jane Smith</td>
-                        <td>Edited a note</td>
-                        <td>2025-03-10</td>
-                    </tr>
-                    <tr>
-                        <td>John Doe</td>
-                        <td>Created a new note</td>
-                        <td>2025-03-10</td>
-                    </tr>
-                    <tr>
-                        <td>Jane Smith</td>
-                        <td>Edited a note</td>
-                        <td>2025-03-10</td>
-                    </tr>
-                    <tr>
-                        <td>John Doe</td>
-                        <td>Created a new note</td>
-                        <td>2025-03-10</td>
-                    </tr>
-                    <tr>
-                        <td>Jane Smith</td>
-                        <td>Edited a note</td>
-                        <td>2025-03-10</td>
-                    </tr>
-                    <tr>
-                        <td>John Doe</td>
-                        <td>Created a new note</td>
-                        <td>2025-03-10</td>
-                    </tr>
+                    <?php
+                    if ($result->num_rows > 0) {
+                        $serial = 1;
+                        while ($row = $result->fetch_assoc()) {
+                            echo "<tr>";
+                            echo "<td>" . $serial++ . "</td>"; // Serial Number
+                            echo "<td><img src='../userpannel/" . htmlspecialchars($row['profile_picture']) . "' class='profile-img' alt='Profile'></td>";
+                            echo "<td>" . htmlspecialchars($row['username']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                            echo "</tr>";
+                        }
+                    } else {
+                        echo "<tr><td colspan='4'>No users found</td></tr>";
+                    }
+                    ?>
                 </tbody>
             </table>
         </div>
