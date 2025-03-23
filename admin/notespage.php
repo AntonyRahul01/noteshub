@@ -158,6 +158,8 @@ $result = $conn->query("
             background-color: #f9f9f9;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -182,6 +184,13 @@ $result = $conn->query("
                 <input type="text" id="searchSubject" placeholder="Search by Subject" onkeyup="filterNotes()" style="padding: 10px; width: 250px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
                 <input type="text" id="searchUsername" placeholder="Search by Username" onkeyup="filterNotes()" style="padding: 10px; width: 250px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc;">
             </div>
+            <!-- Download Report -->
+            <div class="text-end mb-4">
+                <button class="btn" style=" background: linear-gradient(135deg, #2c3e50, #34495e); color: #ffd700; font-weight: bold;" onclick="downloadPDF()">
+                    Generate Report
+                </button>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -189,6 +198,8 @@ $result = $conn->query("
                         <th>Title</th>
                         <th>Subject</th>
                         <th>Author</th>
+                        <th>Total Views</th>
+                        <th>Total Downloads</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -201,6 +212,8 @@ $result = $conn->query("
                         echo "<td>" . htmlspecialchars($row['notes_title']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['notes_subject']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['username']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['view_count']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['view_count']) . "</td>";
                         echo "<td>
                 <a href='../userpannel/uploads/" . htmlspecialchars($row['pdf']) . "' target='_blank' class='btn btn-primary btn-sm'>View</a>
                 <a href='?delete=" . $row['id'] . "' class='btn btn-danger btn-sm' onclick='return confirm(\"Are you sure you want to delete this note?\")'>Delete</a>
@@ -214,6 +227,62 @@ $result = $conn->query("
             </table>
         </div>
     </div>
+
+    <script>
+        async function downloadPDF() {
+            const {
+                jsPDF
+            } = window.jspdf;
+            const pdf = new jsPDF('p', 'pt', 'a4');
+
+            // Add Title
+            const currentDate = new Date().toLocaleDateString();
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(22);
+            pdf.text('NotesHub - Over All Notes Report', 30, 40);
+
+            // Add Date
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Generated on: ${currentDate}`, 30, 60);
+
+            // Add a Line
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.5);
+            pdf.line(30, 70, 565, 70);
+
+            // Temporarily hide the Action column using CSS
+            const actionIndex = document.querySelector('thead tr').cells.length - 1;
+            document.querySelectorAll(`table tr`).forEach(row => {
+                if (row.cells.length > actionIndex) {
+                    row.cells[actionIndex].style.display = 'none';
+                }
+            });
+
+            // Capture the Table using html2canvas
+            const table = document.querySelector('table');
+            await html2canvas(table, {
+                scale: 2,
+                useCORS: true,
+            }).then((canvas) => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 500;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 30, 80, imgWidth, imgHeight);
+            });
+
+            // Restore the Action column visibility
+            document.querySelectorAll(`table tr`).forEach(row => {
+                if (row.cells.length > actionIndex) {
+                    row.cells[actionIndex].style.display = '';
+                }
+            });
+
+            // Save PDF
+            pdf.save(`Notes_Admin_Report_${currentDate.replace(/\//g, '-')}.pdf`);
+        }
+    </script>
+
     <script>
         function filterNotes() {
             let searchTitle = document.getElementById("searchTitle").value.toLowerCase();

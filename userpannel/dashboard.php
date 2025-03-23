@@ -258,6 +258,9 @@ $stmt->close();
     </style>
     <!-- FontAwesome Icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 </head>
 
 <body>
@@ -292,7 +295,12 @@ $stmt->close();
                 </div>
             </div>
         </div>
-
+        <!-- Download Report -->
+        <div class="text-end mb-4">
+            <button class="btn" style=" background: linear-gradient(135deg, #2c3e50, #34495e); color: #ffd700; font-weight: bold;" onclick="downloadPDF()">
+                Generate Report
+            </button>
+        </div>
 
         <table>
             <thead>
@@ -318,7 +326,50 @@ $stmt->close();
                 <?php } ?>
             </tbody>
         </table>
+        <!-- <button class="btn btn-success mb-3" onclick="downloadPDF()">Download Table as PDF</button> -->
+
     </div>
+
+    <script>
+        async function downloadPDF() {
+            const {
+                jsPDF
+            } = window.jspdf;
+            const pdf = new jsPDF('p', 'pt', 'a4');
+
+            // Add Title
+            const currentDate = new Date().toLocaleDateString();
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(22);
+            pdf.text('NotesHub - Notes Report', 30, 40);
+
+            // Add Date
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Generated on: ${currentDate}`, 30, 60);
+
+            // Add a Line
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.5);
+            pdf.line(30, 70, 565, 70);
+
+            // Capture the Table
+            const table = document.querySelector('table');
+            await html2canvas(table, {
+                scale: 2,
+                useCORS: true,
+            }).then((canvas) => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 500;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                pdf.addImage(imgData, 'PNG', 30, 80, imgWidth, imgHeight);
+            });
+
+            // Save PDF
+            pdf.save(`Notes_Report_${currentDate.replace(/\//g, '-')}.pdf`);
+        }
+    </script>
 </body>
 
 </html>
