@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 23, 2025 at 03:48 AM
+-- Generation Time: Mar 24, 2025 at 05:43 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -65,7 +65,7 @@ CREATE TABLE `notes` (
   `user_id` int(11) NOT NULL,
   `notes_title` varchar(255) NOT NULL,
   `notes_subject` varchar(255) NOT NULL,
-  `description` text NOT NULL,
+  `description` varchar(300) NOT NULL,
   `pdf` varchar(255) DEFAULT NULL,
   `view_count` int(11) DEFAULT 0,
   `dwnld_count` int(11) DEFAULT 0,
